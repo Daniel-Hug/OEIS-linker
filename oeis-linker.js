@@ -109,8 +109,8 @@ var autoLinkOEIS = (function() {
 	})();
 
 	var hasOwn = Object.prototype.hasOwnProperty;
-	return function autoLinkOEIS() {
-		findAndReplaceDOMText(document.getElementById('preview-contents'), {
+	return function autoLinkOEIS(parent) {
+		findAndReplaceDOMText(parent || document.body, {
 			preset: 'prose',
 			find: /A\d{6}/g,
 			replace: function(portion, matchedString) {
