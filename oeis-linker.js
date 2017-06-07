@@ -1,20 +1,32 @@
 // Auto-link sequences on the OEIS when referenced by their ID
 //////////////////////////////////////////////////////////////
 
-// Load findAndReplaceDOMText
-var previewReady;
-var sequenceLinkerIsReady;
-loadScript('https://daniel-hug.github.io/findAndReplaceDOMText/src/findAndReplaceDOMText.js', function() {
-	sequenceLinkerIsReady = true;
-	if (previewReady) autoLinkOEIS();
-});
+var autoLinkOEIS = (function() {
+	// Load findAndReplaceDOMText
+	var NON_PROSE_ELEMENTS;
+	loadScript('https://daniel-hug.github.io/findAndReplaceDOMText/src/findAndReplaceDOMText.js', function() {
+		NON_PROSE_ELEMENTS = JSON.parse(JSON.stringify(findAndReplaceDOMText.NON_PROSE_ELEMENTS));
+		NON_PROSE_ELEMENTS.a = 1;
+	});
 
-on('PreviewFinished', function() {
-	previewReady = true;
-	if (sequenceLinkerIsReady) autoLinkOEIS();
-});
+	function makeRequest(url, cb) {
+		var request = new XMLHttpRequest();
+		request.onreadystatechange = function() {
+			if (request.readyState === XMLHttpRequest.DONE && request.status === 200) {
+				cb(request.responseText);
+			}
+		};
+		request.open('GET', url, true);
+		request.send();
+	}
 
-function autoLinkOEIS() {
+	function loadScript(url, cb) {
+		makeRequest(url, function(js) {
+			new Function('on', 'loadScript', 'define', js)(on, loadScript);
+			if (cb) cb();
+		});
+	}
+
 	function debounce(fn, delay) {
 		var timer = null;
 		return function () {
@@ -96,26 +108,25 @@ function autoLinkOEIS() {
 		};
 	})();
 
-	var NON_PROSE_ELEMENTS = JSON.parse(JSON.stringify(findAndReplaceDOMText.NON_PROSE_ELEMENTS));
-	NON_PROSE_ELEMENTS.a = 1;
 	var hasOwn = Object.prototype.hasOwnProperty;
+	return function autoLinkOEIS() {
+		findAndReplaceDOMText(document.getElementById('preview-contents'), {
+			preset: 'prose',
+			find: /A\d{6}/g,
+			replace: function(portion, matchedString) {
+				var a = document.createElement('a');
+				a.href = 'https://oeis.org/' + matchedString;
+				a.textContent = matchedString;
 
-	findAndReplaceDOMText(document.getElementById('preview-contents'), {
-		preset: 'prose',
-		find: /A\d{6}/g,
-		replace: function(portion, matchedString) {
-			var a = document.createElement('a');
-			a.href = 'https://oeis.org/' + matchedString;
-			a.textContent = matchedString;
+				getSequenceName(matchedString, function(name) {
+					a.title = name;
+				});
 
-			getSequenceName(matchedString, function(name) {
-				a.title = name;
-			});
-
-			return a;
-		},
-		filterElements: function(el) {
-			return !hasOwn.call(NON_PROSE_ELEMENTS, el.nodeName.toLowerCase());
-		}
-	});
-}
+				return a;
+			},
+			filterElements: function(el) {
+				return !hasOwn.call(NON_PROSE_ELEMENTS, el.nodeName.toLowerCase());
+			}
+		});
+	}
+})();
