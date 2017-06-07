@@ -22,7 +22,7 @@ var autoLinkOEIS = (function() {
 
 	function loadScript(url, cb) {
 		makeRequest(url, function(js) {
-			new Function('on', 'loadScript', 'define', js)(on, loadScript);
+			new Function('define', js)();
 			if (cb) cb();
 		});
 	}
